@@ -73,6 +73,7 @@ class PConvUnet(object):
             self.model = multi_gpu_model(self.model, gpus=self.gpus)
             self.compile_pconv_unet(self.model, inputs_mask)
         
+        
     def build_vgg(self, weights="imagenet"):
         """
         Load pre-trained VGG16 from keras applications
@@ -94,9 +95,9 @@ class PConvUnet(object):
             return model
                 
         # Get the vgg network from Keras applications
-        if weights in ['imagenet', None]:
+        if weights in ['imagenet', None]:              # None or 'imagenet'
             vgg = VGG16(weights=weights, include_top=False)
-        else:
+        else:                                 # Read from file
             vgg = VGG16(weights=None, include_top=False)
             vgg.load_weights(weights, by_name=True)
 
@@ -109,6 +110,8 @@ class PConvUnet(object):
         model.compile(loss='mse', optimizer='adam')
 
         return model
+    def build_discriminator(self):
+        pass
         
     def build_pconv_unet(self, train_bn=True):      
 
@@ -137,8 +140,10 @@ class PConvUnet(object):
         
         # DECODER
         def decoder_layer(img_in, mask_in, e_conv, e_mask, filters, kernel_size, bn=True):
-            up_img = UpSampling2D(size=(2,2))(img_in)
-            up_mask = UpSampling2D(size=(2,2))(mask_in)
+            rows_ratio=float(int(e_conv.shape[1]))/float(int(img_in.shape[1]))
+            cols_ratio=float(int(e_conv.shape[2]))/float(int(img_in.shape[2]))
+            up_img = UpSampling2D(size=(rows_ratio,cols_ratio))(img_in)
+            up_mask = UpSampling2D(size=(rows_ratio,cols_ratio))(mask_in)
             concat_img = Concatenate(axis=3)([e_conv,up_img])
             concat_mask = Concatenate(axis=3)([e_mask,up_mask])
             conv, mask = PConv2D(filters, kernel_size, padding='same')([concat_img, concat_mask])
